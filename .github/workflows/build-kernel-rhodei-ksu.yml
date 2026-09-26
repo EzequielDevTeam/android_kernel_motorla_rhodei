@@ -110,6 +110,25 @@ jobs:
           # 2) copy_to_kernel_nofault -> probe_kernel_write (mesma semântica 0/-EFAULT no 5.4)
           find KernelSU \( -name '*.c' -o -name '*.h' \) | xargs sed -i 's#copy_to_kernel_nofault#probe_kernel_write#g' || true
           grep -n "probe_kernel_write\|__p4d_to_phys" "$PM" | head || true
+          echo "=== Backport 5.4: SECCOMP_ARCH_NATIVE_NR fallback ==="
+          # Erro visto: seccomp_cache.c:12:34: error: use of undeclared identifier 'SECCOMP_ARCH_NATIVE_NR'
+          # Macro só existe no 5.13+. No 5.4 definimos fallback 512 (cobre todos os syscalls arm64 ~450).
+          SC=KernelSU/kernel/infra/seccomp_cache.c
+          grep -n "SECCOMP_ARCH" "$SC" | head || true
+          grep -q "SECCOMP_ARCH_NATIVE_NR compat 5.4" "$SC" || python3 - "$SC" <<'PYEOF'
+          import sys
+          p = sys.argv[1]
+          s = open(p).read()
+          anchor = '#include "infra/seccomp_cache.h"'
+          shim = anchor + '\n\n// Compat 5.4: SECCOMP_ARCH_*_NR só existe no 5.13+. Fallback cobre syscalls arm64.\n#ifndef SECCOMP_ARCH_NATIVE_NR\n#define SECCOMP_ARCH_NATIVE_NR 512 /* SECCOMP_ARCH_NATIVE_NR compat 5.4 */\n#endif\n#ifndef SECCOMP_ARCH_COMPAT_NR\n#define SECCOMP_ARCH_COMPAT_NR 512\n#endif'
+          if 'SECCOMP_ARCH_NATIVE_NR compat 5.4' not in s:
+              s = s.replace(anchor, shim, 1)
+              open(p, 'w').write(s)
+              print('shim SECCOMP_ARCH_NATIVE_NR aplicado')
+          else:
+              print('shim já existia')
+          PYEOF
+          grep -n "SECCOMP_ARCH" "$SC" | head || true
 
       - name: 4. Injetar CONFIG_KSU=y e CONFIG_KSU_DEBUG=n no defconfig
         working-directory: kernel-source
