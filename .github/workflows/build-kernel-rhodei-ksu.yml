@@ -50,10 +50,14 @@ jobs:
       - name: 3. Setup KernelSU (patch Kconfig/Makefile se necessário)
         working-directory: kernel-source
         run: |
-          # Kernels non-GKI precisam rodar o setup.sh do KernelSU uma vez
-          # para ligar o driver ao Kconfig. Se já estiver integrado, o script só confirma.
+          # Kernel 5.4 (rhodei) NÃO compila com KernelSU latest (v3.x usa linux/pgtable.h só do 5.9+)
+          # Por isso travamos na v0.9.5, última 0.x boa para 5.4 non-GKI.
+          # O setup.sh sem argumento dá git pull + checkout latest -> quebra com:
+          #   drivers/kernelsu/feature/sucompat.c:8:10: fatal error: 'linux/pgtable.h' file not found
           if [ -f KernelSU/kernel/setup.sh ]; then
-            bash KernelSU/kernel/setup.sh || echo "setup.sh avisou algo, continuando..."
+            bash KernelSU/kernel/setup.sh v0.9.5 || echo "setup.sh avisou algo, continuando..."
+            echo "KSU travado em:"
+            git -C KernelSU describe --tags || git -C KernelSU rev-parse --short HEAD
           else
             echo "KernelSU/kernel/setup.sh não encontrado, verificando estrutura..."
             ls -R KernelSU | head -n 100
@@ -114,12 +118,16 @@ jobs:
           clang --version
           mkdir -p ${{ env.OUT_DIR }}
           make O=${{ env.OUT_DIR }} ARCH=arm64 ${{ env.DEFCONFIG }}
+          # Evita build interativo travando no CI (Restart config... / Error in reading or end of file)
+          # Responde tudo com default:
+          make O=${{ env.OUT_DIR }} ARCH=arm64 olddefconfig
           # Confirma que o .config gerado tem KSU
           grep -E 'CONFIG_KSU' ${{ env.OUT_DIR }}/.config || (echo "KSU não entrou no .config!" && exit 1)
 
       - name: 7. Compilar kernel com Clang (Snapdragon 480+)
         working-directory: kernel-source
         run: |
+          set -o pipefail
           export ARCH=arm64
           export SUBARCH=arm64
           export CROSS_COMPILE=aarch64-linux-gnu-
