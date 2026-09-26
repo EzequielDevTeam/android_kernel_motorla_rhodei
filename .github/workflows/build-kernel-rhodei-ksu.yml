@@ -64,14 +64,20 @@ jobs:
           # Em 5.4 não existe include/linux/pgtable.h (só a partir do 5.9).
           # O v3.3.0 usa em kernel/feature/sucompat.c: #include <linux/pgtable.h>
           grep -rn "linux/pgtable.h" KernelSU/ drivers/kernelsu/ 2>/dev/null | head || true
-          find KernelSU -name '*.c' -o -name '*.h' | xargs sed -i 's#<linux/pgtable.h>#<asm/pgtable.h>#g' || true
+          find KernelSU \( -name '*.c' -o -name '*.h' \) | xargs sed -i 's#<linux/pgtable.h>#<asm/pgtable.h>#g' || true
           if [ -L drivers/kernelsu ]; then
             echo "drivers/kernelsu é symlink, arquivos reais já patchados via KernelSU/"
           else
-            find drivers/kernelsu -name '*.c' -o -name '*.h' 2>/dev/null | xargs sed -i 's#<linux/pgtable.h>#<asm/pgtable.h>#g' || true
+            find drivers/kernelsu \( -name '*.c' -o -name '*.h' \) 2>/dev/null | xargs sed -i 's#<linux/pgtable.h>#<asm/pgtable.h>#g' || true
           fi
           echo "=== Verificação ==="
           grep -rn "pgtable.h" KernelSU/kernel/feature/sucompat.c || true
+          echo "=== Backport 5.4: strncpy_from_user_nofault -> strncpy_from_user ==="
+          # strncpy_from_user_nofault só existe no 5.9+. No 5.4 usamos strncpy_from_user.
+          # Erro visto: sucompat.c:104:5: error: implicit declaration of function 'strncpy_from_user_nofault'
+          grep -rn "strncpy_from_user_nofault" KernelSU/ 2>/dev/null | head || true
+          find KernelSU \( -name '*.c' -o -name '*.h' \) | xargs sed -i 's#strncpy_from_user_nofault#strncpy_from_user#g' || true
+          grep -rn "strncpy_from_user" KernelSU/kernel/feature/sucompat.c | head || true
 
       - name: 4. Injetar CONFIG_KSU=y e CONFIG_KSU_DEBUG=n no defconfig
         working-directory: kernel-source
