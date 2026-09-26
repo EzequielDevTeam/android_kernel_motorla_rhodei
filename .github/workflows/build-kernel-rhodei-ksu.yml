@@ -1,0 +1,170 @@
+name: Build Kernel rhodei + KernelSU
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 13-rebase
+    paths:
+      - 'arch/arm64/configs/vendor/rhodei_defconfig'
+      - '.github/workflows/build-kernel-rhodei-ksu.yml'
+
+env:
+  ARCH: arm64
+  SUBARCH: arm64
+  KBUILD_BUILD_USER: github-actions
+  KBUILD_BUILD_HOST: github-cloud
+  DEFCONFIG: vendor/rhodei_defconfig
+  KERNEL_REPO: https://github.com/Forenche/android_kernel_motorla_rhodei
+  KERNEL_BRANCH: 13-rebase
+  OUT_DIR: out
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: 1. Instalar dependências do host Linux
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential bc bison flex libssl-dev libelf-dev \
+            libncurses-dev xz-utils curl git zip unzip ccache \
+            python3 python-is-python3 \
+            gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi \
+            binutils-aarch64-linux-gnu binutils-arm-linux-gnueabi \
+            libxml2-utils rsync
+
+      - name: 2. Clonar kernel com submódulo KernelSU (--recursive)
+        run: |
+          # Requisito: baixar o KernelSU junto (está como submódulo em path=KernelSU)
+          # .gitmodules do repositório:
+          #   [submodule "KernelSU"]
+          #     path = KernelSU
+          #     url = https://github.com/tiann/KernelSU
+          git clone --recursive --depth=1 -b ${{ env.KERNEL_BRANCH }} ${{ env.KERNEL_REPO }} kernel-source
+          cd kernel-source
+          git submodule update --init --recursive
+          ls -la
+          ls -la KernelSU || (echo "ERRO: submódulo KernelSU não veio!" && exit 1)
+
+      - name: 3. Setup KernelSU (patch Kconfig/Makefile se necessário)
+        working-directory: kernel-source
+        run: |
+          # Kernels non-GKI precisam rodar o setup.sh do KernelSU uma vez
+          # para ligar o driver ao Kconfig. Se já estiver integrado, o script só confirma.
+          if [ -f KernelSU/kernel/setup.sh ]; then
+            bash KernelSU/kernel/setup.sh || echo "setup.sh avisou algo, continuando..."
+          else
+            echo "KernelSU/kernel/setup.sh não encontrado, verificando estrutura..."
+            ls -R KernelSU | head -n 100
+          fi
+
+      - name: 4. Injetar CONFIG_KSU=y e CONFIG_KSU_DEBUG=n no defconfig
+        working-directory: kernel-source
+        run: |
+          # Caminho REAL neste repo: arch/arm64/configs/vendor/rhodei_defconfig
+          # (o pedido 'arch/arm64/configs/rhodei_defconfig' não existe aqui, então cobrimos os dois)
+          for f in arch/arm64/configs/vendor/rhodei_defconfig arch/arm64/configs/rhodei_defconfig; do
+            if [ -f "$f" ]; then
+              echo ">>> Ajustando $f"
+              grep -qxF 'CONFIG_KSU=y' "$f" || echo 'CONFIG_KSU=y' >> "$f"
+              # remove qualquer valor antigo de DEBUG e força =n
+              sed -i '/CONFIG_KSU_DEBUG/d' "$f"
+              echo 'CONFIG_KSU_DEBUG=n' >> "$f"
+              # Garantias extras para Snapdragon 480+ (holi) + KernelSU:
+              grep -qxF 'CONFIG_KPROBES=y' "$f" || echo 'CONFIG_KPROBES=y' >> "$f"
+              grep -qxF 'CONFIG_HAVE_KPROBES=y' "$f" || echo 'CONFIG_HAVE_KPROBES=y' >> "$f"
+              grep -qxF 'CONFIG_KPROBE_EVENTS=y' "$f" || echo 'CONFIG_KPROBE_EVENTS=y' >> "$f"
+              grep -qxF 'CONFIG_OVERLAY_FS=y' "$f" || echo 'CONFIG_OVERLAY_FS=y' >> "$f"
+              echo "--- tail $f ---"
+              tail -n 20 "$f"
+              grep -E 'KSU|KPROBES|OVERLAY' "$f" || true
+            fi
+          done
+          test -f arch/arm64/configs/vendor/rhodei_defconfig || test -f arch/arm64/configs/rhodei_defconfig
+
+      - name: 5. Baixar toolchain Clang AOSP + GCC cruzado (arm64)
+        run: |
+          mkdir -p toolchains
+          cd toolchains
+          # Proton-Clang 13 (base AOSP, padrão de mercado para SD480+ / kernel 5.4)
+          # Alternativa Google pura: https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86
+          git clone --depth=1 https://github.com/kdrag0n/proton-clang.git clang
+          ./clang/bin/clang --version || $PWD/clang/bin/clang --version
+          # GCC aarch64/arm32 para CROSS_COMPILE (link + dtb + compat 32-bit)
+          # Já instalados via apt, só checando:
+          aarch64-linux-gnu-gcc --version
+          arm-linux-gnueabi-gcc --version
+
+      - name: 6. Configurar ambiente cross-compile arm64
+        working-directory: kernel-source
+        run: |
+          echo "ARCH=${{ env.ARCH }}" >> $GITHUB_ENV
+          echo "SUBARCH=${{ env.SUBARCH }}" >> $GITHUB_ENV
+          echo "CROSS_COMPILE=aarch64-linux-gnu-" >> $GITHUB_ENV
+          echo "CROSS_COMPILE_ARM32=arm-linux-gnueabi-" >> $GITHUB_ENV
+          echo "CLANG_TRIPLE=aarch64-linux-gnu-" >> $GITHUB_ENV
+          echo "$GITHUB_WORKSPACE/toolchains/clang/bin" >> $GITHUB_PATH
+          export ARCH=arm64
+          export SUBARCH=arm64
+          export CROSS_COMPILE=aarch64-linux-gnu-
+          export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
+          export CLANG_TRIPLE=aarch64-linux-gnu-
+          export PATH="$GITHUB_WORKSPACE/toolchains/clang/bin:$PATH"
+          clang --version
+          mkdir -p ${{ env.OUT_DIR }}
+          make O=${{ env.OUT_DIR }} ARCH=arm64 ${{ env.DEFCONFIG }}
+          # Confirma que o .config gerado tem KSU
+          grep -E 'CONFIG_KSU' ${{ env.OUT_DIR }}/.config || (echo "KSU não entrou no .config!" && exit 1)
+
+      - name: 7. Compilar kernel com Clang (Snapdragon 480+)
+        working-directory: kernel-source
+        run: |
+          export ARCH=arm64
+          export SUBARCH=arm64
+          export CROSS_COMPILE=aarch64-linux-gnu-
+          export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
+          export CLANG_TRIPLE=aarch64-linux-gnu-
+          export PATH="$GITHUB_WORKSPACE/toolchains/clang/bin:$PATH"
+          # Build completo. LLVM=1 usa clang/lld/llvm-* integrados.
+          make -j$(nproc --all) O=${{ env.OUT_DIR }} ARCH=arm64 \
+            CC=clang \
+            CLANG_TRIPLE=aarch64-linux-gnu- \
+            CROSS_COMPILE=aarch64-linux-gnu- \
+            CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
+            LLVM=1 LLVM_IAS=1 \
+            Image.gz-dtb modules 2>&1 | tee build.log
+          echo "=== RESULTADO ==="
+          ls -lh ${{ env.OUT_DIR }}/arch/arm64/boot/ || true
+          ls -lh ${{ env.OUT_DIR }}/arch/arm64/boot/dts/qcom/ 2>/dev/null | head || true
+
+      - name: 8. Verificar artefato final
+        working-directory: kernel-source
+        run: |
+          ls -R ${{ env.OUT_DIR }}/arch/arm64/boot/ || true
+          # Caminho final esperado (padrão QCOM/MSM):
+          #   out/arch/arm64/boot/Image.gz-dtb  (preferencial p/ flash via boot.img)
+          #   fallback: out/arch/arm64/boot/Image.gz ou out/arch/arm64/boot/Image
+          if [ -f "${{ env.OUT_DIR }}/arch/arm64/boot/Image.gz-dtb" ]; then
+            echo "OK: Image.gz-dtb gerado"
+          elif [ -f "${{ env.OUT_DIR }}/arch/arm64/boot/Image.gz" ]; then
+            echo "AVISO: só Image.gz, sem dtb embutido"
+          elif [ -f "${{ env.OUT_DIR }}/arch/arm64/boot/Image" ]; then
+            echo "AVISO: só Image puro"
+          else
+            echo "FALHA: nenhum Image encontrado!"
+            exit 1
+          fi
+
+      - name: 9. Upload do kernel compilado
+        uses: actions/upload-artifact@v4
+        with:
+          name: rhodei-kernel-ksu-${{ github.run_number }}
+          path: |
+            kernel-source/out/arch/arm64/boot/Image.gz-dtb
+            kernel-source/out/arch/arm64/boot/Image.gz
+            kernel-source/out/arch/arm64/boot/Image
+            kernel-source/out/.config
+            kernel-source/build.log
+          if-no-files-found: error
+          retention-days: 14
