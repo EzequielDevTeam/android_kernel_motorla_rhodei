@@ -1,0 +1,80 @@
+name: Pedido de Suporte para Novo Dispositivo
+description: Peça para adicionar KernelSU ao seu celular (rhodei já suportado, outros sob demanda)
+title: "[REQUEST] Adicionar suporte para: "
+labels: ["suporte-solicitado"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado por pedir suporte! Preencha tudo com atenção. Sem o `boot.img` original não consigo começar.
+  - type: input
+    id: nome
+    attributes:
+      label: Nome comercial do celular
+      description: Ex: Moto G62 5G, Moto G52, Poco X5
+      placeholder: Ex: Moto G62 5G
+    validations:
+      required: true
+  - type: input
+    id: codename
+    attributes:
+      label: Codinome (Device Codename)
+      description: Ex: rhodei, rhode, sunny, alioth. Veja em fastboot ou no build.prop (ro.product.device)
+      placeholder: Ex: rhodei
+    validations:
+      required: true
+  - type: input
+    id: chipset
+    attributes:
+      label: Modelo do processador (Chipset)
+      description: Ex: Snapdragon 480+, Snapdragon 680, Helio G99
+      placeholder: Ex: Snapdragon 480+
+    validations:
+      required: true
+  - type: dropdown
+    id: android
+    attributes:
+      label: Versão do Android
+      description: Versão atual da Stock ROM de onde saiu o boot.img
+      options:
+        - Android 12
+        - Android 13
+        - Android 14
+        - Android 15
+        - Android 16
+    validations:
+      required: true
+  - type: textarea
+    id: bootimg
+    attributes:
+      label: Link do boot.img original (Stock ROM)
+      description: Cole o link (Google Drive, Mega, GitHub Release) OU arraste o boot.img aqui embaixo. OBRIGATÓRIO.
+      placeholder: https://drive.google.com/... ou anexe o arquivo
+    validations:
+      required: true
+  - type: input
+    id: kernelsource
+    attributes:
+      label: Link do código-fonte do Kernel (se tiver)
+      description: Link do repo da fabricante / GitHub com o kernel do seu aparelho. Se não tiver, deixe em branco.
+      placeholder: https://github.com/... ou https://source...
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Confirmações técnicas
+      options:
+        - label: Anexei / mandei o link do `boot.img` original da minha Stock ROM atual
+          required: true
+        - label: Meu bootloader já está desbloqueado (ou sei como desbloquear)
+          required: false
+  - type: textarea
+    id: extra
+    attributes:
+      label: Observações adicionais
+      description: Detalhe extra, variante (XT...), operadora, erro que já tentou, etc.
+      placeholder: Ex: XT2223-1, RETBR, já testei GKI e não bootou...
+    validations:
+      required: false
