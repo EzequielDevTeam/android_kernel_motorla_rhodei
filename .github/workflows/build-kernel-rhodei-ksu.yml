@@ -85,6 +85,31 @@ jobs:
           find KernelSU \( -name '*.c' -o -name '*.h' \) | xargs sed -i 's#register_trace_prio_sys_enter(ksu_sys_enter_handler, NULL, INT_MIN)#register_trace_sys_enter(ksu_sys_enter_handler, NULL)#g' || true
           find KernelSU \( -name '*.c' -o -name '*.h' \) | xargs sed -i 's#register_trace_prio_#register_trace_#g; s#, NULL, INT_MIN)#, NULL)#g' || true
           grep -rn "register_trace.*sys_enter" KernelSU/kernel/hook/syscall_hook_manager.c | head || true
+          echo "=== Backport 5.4: patch_memory __p4d_to_phys + copy_to_kernel_nofault ==="
+          # Erros vistos:
+          #   patch_memory.c:46:16: error: implicit declaration of function '__p4d_to_phys'
+          #   patch_memory.c:150:16: error: implicit declaration of function 'copy_to_kernel_nofault'
+          # No 5.4 arm64 não há P4D real (__p4d_to_phys não existe) nem copy_to_kernel_nofault (só 5.8+).
+          # copy_to_kernel_nofault(dst,src,len)=0 ok / -EFAULT erro == probe_kernel_write(dst,src,len).
+          PM=KernelSU/kernel/hook/arm64/patch_memory.c
+          grep -n "__p4d_to_phys\|copy_to_kernel_nofault" "$PM" | head || true
+          # 1) shim para __p4d_to_phys (P4D huge page não existe no 5.4, bloco nunca executa de verdade)
+          grep -q "__p4d_to_phys compat" "$PM" || python3 - "$PM" <<'PYEOF'
+          import sys
+          p = sys.argv[1]
+          s = open(p).read()
+          anchor = '#include "asm-generic/fixmap.h"'
+          shim = anchor + '\n\n// Compat 5.4: sem P4D real nem __p4d_to_phys (só 5.9+). P4D huge page inexistente no arm64 5.4.\n#ifndef __p4d_to_phys\n#define __p4d_to_phys(x) (0) /* __p4d_to_phys compat 5.4 */\n#endif'
+          if '__p4d_to_phys compat' not in s:
+              s = s.replace(anchor, shim, 1)
+              open(p, 'w').write(s)
+              print('shim __p4d_to_phys aplicado')
+          else:
+              print('shim já existia')
+          PYEOF
+          # 2) copy_to_kernel_nofault -> probe_kernel_write (mesma semântica 0/-EFAULT no 5.4)
+          find KernelSU \( -name '*.c' -o -name '*.h' \) | xargs sed -i 's#copy_to_kernel_nofault#probe_kernel_write#g' || true
+          grep -n "probe_kernel_write\|__p4d_to_phys" "$PM" | head || true
 
       - name: 4. Injetar CONFIG_KSU=y e CONFIG_KSU_DEBUG=n no defconfig
         working-directory: kernel-source
