@@ -7,6 +7,10 @@ on:
         description: 'Build sem KSU (bisect display)'
         type: boolean
         default: false
+      clang11:
+        description: 'Usa clang 11.0.2 stock em vez do proton-13'
+        type: boolean
+        default: false
   push:
     branches:
       - 13-rebase
@@ -246,6 +250,11 @@ jobs:
         run: |
           mkdir -p toolchains
           cd toolchains
+          if [ "${{ inputs.clang11 }}" = "true" ]; then
+            echo "Toolchain STOCK clang-r383902b1 (11.0.2)"
+            curl -L -o clang11.tar.gz https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/android11-release/clang-r383902b1.tar.gz
+            mkdir -p clang && tar -xzf clang11.tar.gz -C clang && rm clang11.tar.gz
+          else
           # Proton-Clang 13 (base AOSP, padrão de mercado para SD480+ / kernel 5.4)
           # Alternativa Google pura: https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86
           git clone --depth=1 https://github.com/kdrag0n/proton-clang.git clang
@@ -254,6 +263,7 @@ jobs:
           # Já instalados via apt, só checando:
           aarch64-linux-gnu-gcc --version
           arm-linux-gnueabi-gcc --version
+          fi
 
       - name: 5b. Cache do ccache (não recompila as ~4000 coisas toda vez)
         uses: actions/cache@v4
