@@ -2,6 +2,11 @@ name: Build Kernel rhodei + KernelSU
 
 on:
   workflow_dispatch:
+    inputs:
+      skip_ksu:
+        description: 'Build sem KSU (bisect display)'
+        type: boolean
+        default: false
   push:
     branches:
       - 13-rebase
@@ -49,6 +54,7 @@ jobs:
           ls -la KernelSU || (echo "ERRO: submódulo KernelSU não veio!" && exit 1)
 
       - name: 3. Setup KernelSU v3.3.0 + backport para kernel 5.4
+        if: ${{ inputs.skip_ksu != true }}
         working-directory: kernel-source
         run: |
           # Pedido do usuário: v3.3.0 mesmo no kernel 5.4 (experimental, pode dar erros).
@@ -202,10 +208,12 @@ jobs:
           for f in arch/arm64/configs/rhodec_stock_defconfig arch/arm64/configs/rhodei_stock_defconfig arch/arm64/configs/vendor/rhodei_defconfig arch/arm64/configs/rhodei_defconfig; do
             if [ -f "$f" ]; then
               echo ">>> Ajustando $f"
-              grep -qxF 'CONFIG_KSU=y' "$f" || echo 'CONFIG_KSU=y' >> "$f"
-              # remove qualquer valor antigo de DEBUG e força =n
-              sed -i '/CONFIG_KSU_DEBUG/d' "$f"
-              echo 'CONFIG_KSU_DEBUG=n' >> "$f"
+              if [ "${{ inputs.skip_ksu }}" != "true" ]; then
+                grep -qxF 'CONFIG_KSU=y' "$f" || echo 'CONFIG_KSU=y' >> "$f"
+                # remove qualquer valor antigo de DEBUG e força =n
+                sed -i '/CONFIG_KSU_DEBUG/d' "$f"
+                echo 'CONFIG_KSU_DEBUG=n' >> "$f"
+              fi
               # Garantias extras para Snapdragon 480+ (holi) + KernelSU:
               grep -qxF 'CONFIG_KPROBES=y' "$f" || echo 'CONFIG_KPROBES=y' >> "$f"
               grep -qxF 'CONFIG_HAVE_KPROBES=y' "$f" || echo 'CONFIG_HAVE_KPROBES=y' >> "$f"
@@ -284,7 +292,7 @@ jobs:
           # Responde tudo com default:
           make O=${{ env.OUT_DIR }} ARCH=arm64 olddefconfig
           # Confirma que o .config gerado tem KSU
-          grep -E 'CONFIG_KSU' ${{ env.OUT_DIR }}/.config || (echo "KSU não entrou no .config!" && exit 1)
+          if [ "${{ inputs.skip_ksu }}" = "true" ]; then echo "Teste sem KSU, pulando checagem"; else grep -E 'CONFIG_KSU' ${{ env.OUT_DIR }}/.config || (echo "KSU não entrou no .config!" && exit 1); fi
 
       - name: 7. Compilar kernel com Clang (Snapdragon 480+)
         working-directory: kernel-source
