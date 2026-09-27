@@ -7,6 +7,7 @@ on:
       - 13-rebase
     paths:
       - 'arch/arm64/configs/vendor/rhodei_defconfig'
+      - 'arch/arm64/configs/rhodei_stock_defconfig'
       - '.github/workflows/build-kernel-rhodei-ksu.yml'
 
 env:
@@ -14,7 +15,7 @@ env:
   SUBARCH: arm64
   KBUILD_BUILD_USER: github-actions
   KBUILD_BUILD_HOST: github-cloud
-  DEFCONFIG: vendor/rhodei_defconfig
+  DEFCONFIG: rhodei_stock_defconfig
   KERNEL_REPO: https://github.com/Forenche/android_kernel_motorla_rhodei
   KERNEL_BRANCH: 13-rebase
   OUT_DIR: out
@@ -196,9 +197,9 @@ jobs:
       - name: 4. Injetar CONFIG_KSU=y e CONFIG_KSU_DEBUG=n no defconfig
         working-directory: kernel-source
         run: |
-          # Caminho REAL neste repo: arch/arm64/configs/vendor/rhodei_defconfig
-          # (o pedido 'arch/arm64/configs/rhodei_defconfig' não existe aqui, então cobrimos os dois)
-          for f in arch/arm64/configs/vendor/rhodei_defconfig arch/arm64/configs/rhodei_defconfig; do
+          # Stock (rhodei_stock_defconfig) = config original da Motorola com todos os drivers.
+          # Eh o alvo do build; os outros dois sao ajustados por compatibilidade.
+          for f in arch/arm64/configs/rhodei_stock_defconfig arch/arm64/configs/vendor/rhodei_defconfig arch/arm64/configs/rhodei_defconfig; do
             if [ -f "$f" ]; then
               echo ">>> Ajustando $f"
               grep -qxF 'CONFIG_KSU=y' "$f" || echo 'CONFIG_KSU=y' >> "$f"
@@ -215,7 +216,7 @@ jobs:
               grep -E 'KSU|KPROBES|OVERLAY' "$f" || true
             fi
           done
-          test -f arch/arm64/configs/vendor/rhodei_defconfig || test -f arch/arm64/configs/rhodei_defconfig
+          test -f arch/arm64/configs/rhodei_stock_defconfig || test -f arch/arm64/configs/vendor/rhodei_defconfig
 
       - name: 5. Baixar toolchain Clang AOSP + GCC cruzado (arm64)
         run: |
