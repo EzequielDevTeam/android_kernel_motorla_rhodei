@@ -171,6 +171,13 @@ jobs:
           grep -rn "linux/minmax.h" KernelSU/ 2>/dev/null | head || true
           find KernelSU \( -name '*.c' -o -name '*.h' \) | xargs sed -i 's#<linux/minmax.h>#<linux/kernel.h>#g' || true
           grep -rn "minmax.h\|kernel.h" KernelSU/kernel/sulog/event.c | head || true
+          echo "=== Backport 5.4: sched.h no supercall/dispatch.c ==="
+          # Erro visto: dispatch.c:642: tasklist_lock/task_pgrp/init_task/task_session nao declarados.
+          # No 5.4 ficam em linux/sched.h, que o arquivo nao inclui (nas novas vem por tabela).
+          SD=KernelSU/kernel/supercall/dispatch.c
+          grep -n "include.*sched.h\|tasklist_lock" "$SD" | head || true
+          grep -q "#include <linux/sched.h>" "$SD" || sed -i 's|#include <linux/capability.h>|#include <linux/sched.h>\n#include <linux/capability.h>|' "$SD" || true
+          grep -n "linux/sched.h" "$SD" | head || true
           echo "=== Backport 5.4: selinux dup/swap -> policydb ao vivo (v0.9.5 style) ==="
           # Erros vistos: rules.c:47/54/61/... selinux_state.policy, policy_mutex, selinux_policy incompleto.
           # selinux_state.policy/policy_mutex/dup atomico so existem no 5.10+. No 5.4 edita ao vivo via selinux_state.ss.
