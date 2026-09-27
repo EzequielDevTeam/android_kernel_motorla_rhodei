@@ -217,6 +217,19 @@ jobs:
             fi
           done
           test -f arch/arm64/configs/rhodec_stock_defconfig || test -f arch/arm64/configs/rhodei_stock_defconfig
+          echo "=== Versao 5.4.284 + LOCALVERSION stock (carregar .ko prebuilt) ==="
+          # Modulos vendor (touch ili/nova/chipone, backlight, wlan...) sao prebuilt 5.4.284-moto.
+          # vermagic tem que bater EXATO senao recusam. Forja SUBLEVEL + LOCALVERSION do stock.
+          grep -n "^SUBLEVEL" Makefile
+          sed -i 's/^SUBLEVEL = 251/SUBLEVEL = 284/' Makefile
+          grep -n "^SUBLEVEL" Makefile
+          for f in arch/arm64/configs/rhodec_stock_defconfig arch/arm64/configs/rhodei_stock_defconfig arch/arm64/configs/vendor/rhodei_defconfig arch/arm64/configs/rhodei_defconfig; do
+            if [ -f "$f" ]; then
+              sed -i '/CONFIG_LOCALVERSION_AUTO/d; s/^CONFIG_LOCALVERSION=.*/CONFIG_LOCALVERSION="-moto-g2e2d53e9d950"/' "$f"
+              grep -qxF '# CONFIG_LOCALVERSION_AUTO is not set' "$f" || echo '# CONFIG_LOCALVERSION_AUTO is not set' >> "$f"
+            fi
+          done
+          grep -n "LOCALVERSION" arch/arm64/configs/rhodec_stock_defconfig | head
 
       - name: 5. Baixar toolchain Clang AOSP + GCC cruzado (arm64)
         run: |
