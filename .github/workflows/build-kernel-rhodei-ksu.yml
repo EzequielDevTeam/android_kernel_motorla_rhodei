@@ -213,6 +213,9 @@ jobs:
                 # remove qualquer valor antigo de DEBUG e força =n
                 sed -i '/CONFIG_KSU_DEBUG/d' "$f"
                 echo 'CONFIG_KSU_DEBUG=n' >> "$f"
+              else
+                sed -i '/CONFIG_KSU=y/d; /CONFIG_KSU_DEBUG/d' "$f"
+                grep -qxF '# CONFIG_KSU is not set' "$f" || echo '# CONFIG_KSU is not set' >> "$f"
               fi
               # Garantias extras para Snapdragon 480+ (holi) + KernelSU:
               grep -qxF 'CONFIG_KPROBES=y' "$f" || echo 'CONFIG_KPROBES=y' >> "$f"
