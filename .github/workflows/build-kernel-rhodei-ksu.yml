@@ -252,8 +252,8 @@ jobs:
           cd toolchains
           if [ "${{ inputs.clang11 }}" = "true" ]; then
             echo "Toolchain STOCK clang-r383902b1 (11.0.2)"
-            curl -L -o clang11.tar.gz https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/android11-release/clang-r383902b1.tar.gz
-            mkdir -p clang && tar -xzf clang11.tar.gz -C clang && rm clang11.tar.gz
+            git clone --depth=1 https://github.com/anrui2032/android_prebuilts_clang_host_linux-x86_clang-r383902b1.git clang
+            ./clang/bin/clang --version || $PWD/clang/bin/clang --version
           else
           # Proton-Clang 13 (base AOSP, padrão de mercado para SD480+ / kernel 5.4)
           # Alternativa Google pura: https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86
