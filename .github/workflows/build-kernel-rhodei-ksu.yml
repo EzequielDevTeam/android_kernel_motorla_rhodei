@@ -154,6 +154,12 @@ jobs:
           grep -n "filter_count" "$AP" | head || true
           find KernelSU \( -name '*.c' -o -name '*.h' \) | xargs sed -i 's#atomic_set(&current->seccomp.filter_count, 0);#// compat 5.4: struct seccomp sem filter_count (so 5.13+)#g' || true
           grep -n "filter_count" "$AP" | head || true
+          echo "=== Backport 5.4: copy_from/to_user_nofault -> copy_from/to_user ==="
+          # Erro visto: ksud_integration.c:597/600: implicit declaration (só 5.8+).
+          # No contexto (hook de syscall, pode dormir) o plain tem mesma semântica: retorna bytes NAO copiados.
+          grep -rn "copy_from_user_nofault\|copy_to_user_nofault" KernelSU/ 2>/dev/null | head || true
+          find KernelSU \( -name '*.c' -o -name '*.h' \) | xargs sed -i 's#copy_from_user_nofault#copy_from_user#g; s#copy_to_user_nofault#copy_to_user#g' || true
+          grep -rn "user_nofault" KernelSU/ 2>/dev/null | head || echo "sem mais _nofault"
 
       - name: 4. Injetar CONFIG_KSU=y e CONFIG_KSU_DEBUG=n no defconfig
         working-directory: kernel-source
