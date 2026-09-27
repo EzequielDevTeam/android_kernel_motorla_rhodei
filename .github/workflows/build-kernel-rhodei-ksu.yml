@@ -176,8 +176,8 @@ jobs:
           # No 5.4 ficam em linux/sched.h, que o arquivo nao inclui (nas novas vem por tabela).
           SD=KernelSU/kernel/supercall/dispatch.c
           grep -n "include.*sched.h\|tasklist_lock" "$SD" | head || true
-          grep -q "#include <linux/sched.h>" "$SD" || sed -i 's|#include <linux/capability.h>|#include <linux/sched.h>\n#include <linux/capability.h>|' "$SD" || true
-          grep -n "linux/sched.h" "$SD" | head || true
+          grep -q "linux/sched/task.h" "$SD" || sed -i 's|#include <linux/capability.h>|#include <linux/sched/task.h>\n#include <linux/sched/signal.h>\n#include <linux/capability.h>|' "$SD" || true
+          grep -n "linux/sched" "$SD" | head || true
           echo "=== Backport 5.4: selinux dup/swap -> policydb ao vivo (v0.9.5 style) ==="
           # Erros vistos: rules.c:47/54/61/... selinux_state.policy, policy_mutex, selinux_policy incompleto.
           # selinux_state.policy/policy_mutex/dup atomico so existem no 5.10+. No 5.4 edita ao vivo via selinux_state.ss.
