@@ -330,5 +330,6 @@ jobs:
             kernel-source/out/arch/arm64/boot/Image
             kernel-source/out/.config
             kernel-source/build.log
+            kernel-source/out/**/*.ko
           if-no-files-found: error
           retention-days: 14
