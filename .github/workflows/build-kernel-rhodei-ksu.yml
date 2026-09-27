@@ -192,6 +192,14 @@ jobs:
           aarch64-linux-gnu-gcc --version
           arm-linux-gnueabi-gcc --version
 
+      - name: 5b. Cache do ccache (não recompila as ~4000 coisas toda vez)
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: ccache-rhodei-54-${{ github.sha }}
+          restore-keys: |
+            ccache-rhodei-54-
+
       - name: 6. Configurar ambiente cross-compile arm64
         working-directory: kernel-source
         run: |
@@ -201,6 +209,16 @@ jobs:
           echo "CROSS_COMPILE_ARM32=arm-linux-gnueabi-" >> $GITHUB_ENV
           echo "CLANG_TRIPLE=aarch64-linux-gnu-" >> $GITHUB_ENV
           echo "$GITHUB_WORKSPACE/toolchains/clang/bin" >> $GITHUB_PATH
+          # ccache: reaproveita objetos entre runs (só o que mudou recompila)
+          echo "CCACHE_DIR=$HOME/.ccache" >> $GITHUB_ENV
+          echo "CCACHE_MAXSIZE=2G" >> $GITHUB_ENV
+          echo "CCACHE_COMPRESS=true" >> $GITHUB_ENV
+          echo "CCACHE_BASEDIR=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+          echo "CCACHE_SLOPPINESS=time_macros" >> $GITHUB_ENV
+          export CCACHE_DIR=$HOME/.ccache
+          export CCACHE_MAXSIZE=2G
+          export CCACHE_BASEDIR=$GITHUB_WORKSPACE
+          ccache -s || true
           export ARCH=arm64
           export SUBARCH=arm64
           export CROSS_COMPILE=aarch64-linux-gnu-
@@ -226,14 +244,19 @@ jobs:
           export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
           export CLANG_TRIPLE=aarch64-linux-gnu-
           export PATH="$GITHUB_WORKSPACE/toolchains/clang/bin:$PATH"
+          export CCACHE_DIR=$HOME/.ccache
+          export CCACHE_MAXSIZE=2G
+          export CCACHE_BASEDIR=$GITHUB_WORKSPACE
           # Build completo. LLVM=1 usa clang/lld/llvm-* integrados.
+          # CC="ccache clang": reaproveita os ~4000 .o do cache, recompila só o que mudou.
           make -j$(nproc --all) O=${{ env.OUT_DIR }} ARCH=arm64 \
-            CC=clang \
+            CC="ccache clang" \
             CLANG_TRIPLE=aarch64-linux-gnu- \
             CROSS_COMPILE=aarch64-linux-gnu- \
             CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
             LLVM=1 LLVM_IAS=1 \
             Image.gz-dtb modules 2>&1 | tee build.log
+          ccache -s || true
           echo "=== RESULTADO ==="
           ls -lh ${{ env.OUT_DIR }}/arch/arm64/boot/ || true
           ls -lh ${{ env.OUT_DIR }}/arch/arm64/boot/dts/qcom/ 2>/dev/null | head || true
