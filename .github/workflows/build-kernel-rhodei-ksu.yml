@@ -309,6 +309,7 @@ jobs:
             CROSS_COMPILE=aarch64-linux-gnu- \
             CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
             LLVM=1 LLVM_IAS=1 \
+            LOCALVERSION= \
             Image.gz modules 2>&1 | tee build.log
           ccache -s || true
           echo "=== RESULTADO ==="
