@@ -287,13 +287,15 @@ jobs:
           export CCACHE_BASEDIR=$GITHUB_WORKSPACE
           # Build completo. LLVM=1 usa clang/lld/llvm-* integrados.
           # CC="ccache clang": reaproveita os ~4000 .o do cache, recompila só o que mudou.
+          # NOTA rhodei: esta arvore nao tem arch/arm64/boot/dts/ -> alvo Image.gz-dtb NAO existe.
+          # O correto aqui e Image.gz (o Image puro sai como pre-requisito).
           make -j$(nproc --all) O=${{ env.OUT_DIR }} ARCH=arm64 \
             CC="ccache clang" \
             CLANG_TRIPLE=aarch64-linux-gnu- \
             CROSS_COMPILE=aarch64-linux-gnu- \
             CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
             LLVM=1 LLVM_IAS=1 \
-            Image.gz-dtb modules 2>&1 | tee build.log
+            Image.gz modules 2>&1 | tee build.log
           ccache -s || true
           echo "=== RESULTADO ==="
           ls -lh ${{ env.OUT_DIR }}/arch/arm64/boot/ || true
