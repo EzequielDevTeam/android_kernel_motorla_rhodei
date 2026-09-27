@@ -16,7 +16,7 @@ env:
   KBUILD_BUILD_USER: github-actions
   KBUILD_BUILD_HOST: github-cloud
   DEFCONFIG: rhodec_stock_defconfig
-  KERNEL_REPO: https://github.com/Forenche/android_kernel_motorla_rhodei
+  KERNEL_REPO: https://github.com/EzequielDevTeam/android_kernel_motorla_rhodei
   KERNEL_BRANCH: 13-rebase
   OUT_DIR: out
 
