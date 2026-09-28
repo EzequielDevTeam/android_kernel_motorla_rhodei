@@ -61,6 +61,7 @@ jobs:
           rm -rf techpack/display
           cp -r /tmp/td techpack/display
           rm -rf techpack/display/.git
+          python3 tools/dfps_patch.py techpack/display/msm/dsi/dsi_display.c
           ls techpack/display/msm/dsi/ | head -n 5
 
       - name: 3. Setup KernelSU v3.3.0 + backport para kernel 5.4
