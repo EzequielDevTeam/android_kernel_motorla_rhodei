@@ -62,6 +62,7 @@ jobs:
           cp -r /tmp/td techpack/display
           rm -rf techpack/display/.git
           python3 tools/dfps_patch.py techpack/display/msm/dsi/dsi_display.c
+          python3 tools/nvt_fw_patch.py drivers/input/touchscreen/nt36xxx/nt36xxx_fw_update.c
           ls techpack/display/msm/dsi/ | head -n 5
 
       - name: 3. Setup KernelSU v3.3.0 + backport para kernel 5.4
