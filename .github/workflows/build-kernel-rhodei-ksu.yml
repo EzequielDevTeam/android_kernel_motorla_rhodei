@@ -57,7 +57,7 @@ jobs:
         if: ${{ inputs.swap_display == true }}
         working-directory: kernel-source
         run: |
-          git clone --depth=1 https://github.com/MotorolaMobilityLLC/kernel-msm-5.4-techpack-display.git /tmp/td
+          git clone --depth=1 -b MMI-T1SSS33.1-119-8-16 https://github.com/MotorolaMobilityLLC/kernel-msm-5.4-techpack-display.git /tmp/td
           rm -rf techpack/display
           cp -r /tmp/td techpack/display
           rm -rf techpack/display/.git
