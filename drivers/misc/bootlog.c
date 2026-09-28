@@ -82,7 +82,7 @@ static void bl_work(struct work_struct *w)
 	c->dumper.dump = bl_dump;
 	c->dumper.max_reason = KMSG_DUMP_POWEROFF;
 	if (kmsg_dump_register(&c->dumper) == 0) {
-		kmsg_dump(KMSG_DUMP_BOOT);
+		kmsg_dump(KMSG_DUMP_POWEROFF);
 		kmsg_dump_unregister(&c->dumper);
 	}
 	if (c->len)
