@@ -546,3 +546,10 @@ source "drivers/misc/mmi_sys_temp/Kconfig"
 source "drivers/misc/ldo_vibrator_mmi/Kconfig"
 source "drivers/misc/sx937x/Kconfig"
 endmenu
+
+config BOOTLOG_DMESG
+	bool "Grava dmesg do boot em /data/misc/bootlog.txt"
+	default n
+	help
+	  Salva o log do kernel no armazenamento interno (debug).
+
