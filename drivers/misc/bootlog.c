@@ -2,45 +2,66 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/fs.h>
+#include <linux/slab.h>
 #include <linux/delay.h>
 #include <linux/workqueue.h>
 #include <linux/kmsg_dump.h>
-#include <linux/slab.h>
 
-#define BOOTLOG_PATH "/data/misc/bootlog.txt"
-#define BOOTLOG_RETRY 40
+#define BL_PATH "/data/misc/bootlog.txt"
+#define BL_RETRY 60
 
-static void bootlog_flush(struct kmsg_dumper *dumper, enum kmsg_dump_type type)
+struct bl_ctx {
+	struct kmsg_dumper dumper;
+	char *buf;
+	size_t cap;
+	size_t len;
+};
+
+static void bl_dump(struct kmsg_dumper *dumper, enum kmsg_dump_reason reason)
 {
-	struct file *f;
-	char *buf, *p;
-	size_t len = 0, cap = 262144;
+	struct bl_ctx *c = container_of(dumper, struct bl_ctx, dumper);
+	char *line;
+	size_t l = 0;
 
-	buf = kzalloc(cap, GFP_KERNEL);
-	if (!buf)
+	if (!c->buf)
 		return;
-	p = buf;
-	len = kmsg_dump_copy_buffer(dumper, true, p, cap, &len);
-	if (len == 0) {
-		kfree(buf);
+	line = kmalloc(1024, GFP_KERNEL);
+	if (!line)
 		return;
+	while (kmsg_dump_get_line_nolock(dumper, true, line, 1024, &l)) {
+		size_t n = strlen(line);
+		if (c->len + n + 1 >= c->cap)
+			break;
+		memcpy(c->buf + c->len, line, n);
+		c->len += n;
+		c->buf[c->len++] = '\n';
+		l = 0;
 	}
-	f = filp_open(BOOTLOG_PATH, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-	if (!IS_ERR(f)) {
-		vfs_write(f, buf, len, &f->f_pos);
-		filp_close(f, NULL);
-		pr_info("bootlog: wrote %zu bytes to %s\n", len, BOOTLOG_PATH);
-	}
-	kfree(buf);
+	kfree(line);
 }
 
-static void bootlog_work(struct work_struct *w)
+static void bl_write(const char *path, const char *data, size_t len)
 {
-	struct kmsg_dumper dumper;
-	int i;
+	struct file *f;
+	loff_t pos = 0;
 
-	for (i = 0; i < BOOTLOG_RETRY; i++) {
-		struct file *f = filp_open(BOOTLOG_PATH, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	f = filp_open(path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	if (IS_ERR(f))
+		return;
+	vfs_write(f, data, len, &pos);
+	filp_close(f, NULL);
+	pr_info("bootlog: wrote %zu bytes to %s\n", len, path);
+}
+
+static void bl_work(struct work_struct *w)
+{
+	struct bl_ctx *c;
+	int i;
+	struct file *f;
+
+	/* espera /data existir */
+	for (i = 0; i < BL_RETRY; i++) {
+		f = filp_open(BL_PATH, O_WRONLY | O_CREAT | O_TRUNC, 0644);
 		if (!IS_ERR(f)) {
 			filp_close(f, NULL);
 			break;
@@ -48,14 +69,31 @@ static void bootlog_work(struct work_struct *w)
 		msleep(1500);
 	}
 
-	kmsg_dump_register(&dumper, true);
-	bootlog_flush(&dumper, KMSG_DUMP_BOOT);
-	kmsg_dump_unregister(&dumper);
+	c = kzalloc(sizeof(*c), GFP_KERNEL);
+	if (!c)
+		return;
+	c->cap = 512 * 1024;
+	c->buf = kzalloc(c->cap, GFP_KERNEL);
+	if (!c->buf) {
+		kfree(c);
+		return;
+	}
+
+	c->dumper.dump = bl_dump;
+	c->dumper.max_reason = KMSG_DUMP_POWEROFF;
+	if (kmsg_dump_register(&c->dumper) == 0) {
+		kmsg_dump(KMSG_DUMP_BOOT);
+		kmsg_dump_unregister(&c->dumper);
+	}
+	if (c->len)
+		bl_write(BL_PATH, c->buf, c->len);
+	kfree(c->buf);
+	kfree(c);
 }
 
-static struct workqueue_struct *wq;
-static int __init bootlog_init(void)
+static int __init bl_init(void)
 {
+	struct workqueue_struct *wq;
 	struct work_struct *w;
 
 	if (!IS_ENABLED(CONFIG_BOOTLOG_DMESG))
@@ -67,17 +105,10 @@ static int __init bootlog_init(void)
 	w = kzalloc(sizeof(*w), GFP_KERNEL);
 	if (!w)
 		return -ENOMEM;
-	INIT_WORK(w, bootlog_work);
+	INIT_WORK(w, bl_work);
 	queue_work(wq, w);
 	return 0;
 }
-late_initcall(bootlog_init);
-
-static void __exit bootlog_exit(void)
-{
-	if (wq)
-		destroy_workqueue(wq);
-}
-module_exit(bootlog_exit);
+late_initcall(bl_init);
 
 MODULE_LICENSE("GPL");
