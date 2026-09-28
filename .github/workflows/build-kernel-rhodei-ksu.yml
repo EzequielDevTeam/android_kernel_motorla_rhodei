@@ -2,6 +2,11 @@ name: Build Kernel rhodei + KernelSU
 
 on:
   workflow_dispatch:
+    inputs:
+      swap_display:
+        description: 'Troca techpack/display pelo oficial Motorola 5.4'
+        type: boolean
+        default: false
   push:
     branches:
       - 13-rebase
@@ -47,6 +52,16 @@ jobs:
           git submodule update --init --recursive
           ls -la
           ls -la KernelSU || (echo "ERRO: submódulo KernelSU não veio!" && exit 1)
+
+      - name: 2b. Trocar techpack/display pelo snapshot oficial Motorola 5.4
+        if: ${{ inputs.swap_display == true }}
+        working-directory: kernel-source
+        run: |
+          git clone --depth=1 https://github.com/MotorolaMobilityLLC/kernel-msm-5.4-techpack-display.git /tmp/td
+          rm -rf techpack/display
+          cp -r /tmp/td techpack/display
+          rm -rf techpack/display/.git
+          ls techpack/display/msm/dsi/ | head -n 5
 
       - name: 3. Setup KernelSU v3.3.0 + backport para kernel 5.4
         working-directory: kernel-source
