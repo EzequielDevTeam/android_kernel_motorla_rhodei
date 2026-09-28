@@ -5,7 +5,6 @@
 #include <linux/delay.h>
 #include <linux/workqueue.h>
 #include <linux/kmsg_dump.h>
-#include <soc/qcom/kmsg_dump.h>
 
 #define BOOTLOG_PATH "/data/misc/bootlog.txt"
 #define BOOTLOG_RETRY 40
