@@ -50,10 +50,13 @@
 #ifdef NVT_CONFIG_PANEL_NOTIFICATIONS
 #define register_panel_notifier panel_register_notifier
 #define unregister_panel_notifier panel_unregister_notifier
+/* enum touch_state ja vem do header quando NVT_SET_TOUCH_STATE esta ativo */
+#ifndef NVT_SET_TOUCH_STATE
 enum touch_state {
 	TOUCH_DEEP_SLEEP_STATE = 0,
 	TOUCH_LOW_POWER_STATE,
 };
+#endif
 #else
 #define register_panel_notifier(...) rc
 #define unregister_panel_notifier(...) rc
