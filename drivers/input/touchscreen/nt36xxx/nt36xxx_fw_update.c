@@ -18,6 +18,9 @@
  */
 
 #include <linux/firmware.h>
+#include <linux/of.h>
+#include <linux/fs.h>
+#include <linux/vmalloc.h>
 
 #include "nt36xxx.h"
 
@@ -78,7 +81,59 @@ int32_t update_firmware_request(char *filename)
 
 	NVT_LOG("filename is %s\n", filename);
 
+	/* FW do touch da Motorola fica em /vendor/firmware, fora do path
+	 * padrao do firmware_class. Se o loader falhar, le o arquivo direto. */
 	ret = request_firmware(&fw_entry, filename, &ts->client->dev);
+	if (ret) {
+		char alt[160];
+		const char *vdir;
+		struct file *f;
+		loff_t pos = 0;
+		void *buf;
+		ssize_t n;
+
+		vdir = of_get_property(ts->client->dev.of_node,
+					"firmware-path", NULL);
+		if (!vdir)
+			vdir = "/vendor/firmware";
+
+		snprintf(alt, sizeof(alt), "%s/%s", vdir, filename);
+		NVT_ERR("loader falhou (%d), lendo %s direto\n", ret, alt);
+
+		f = filp_open(alt, O_RDONLY, 0);
+		if (IS_ERR(f)) {
+			NVT_ERR("abrir %s falhou\n", alt);
+			return ret;
+		}
+		n = vfs_read(f, alt, sizeof(alt), &pos);
+		filp_close(f, NULL);
+		if (n <= 0) {
+			NVT_ERR("leitura de %s falhou\n", alt);
+			return ret;
+		}
+		buf = vmalloc(n);
+		if (!buf)
+			return -ENOMEM;
+		pos = 0;
+		f = filp_open(alt, O_RDONLY, 0);
+		if (IS_ERR(f)) {
+			vfree(buf);
+			return ret;
+		}
+		vfs_read(f, buf, n, &pos);
+		filp_close(f, NULL);
+
+		fw_entry = kzalloc(sizeof(*fw_entry), GFP_KERNEL);
+		if (!fw_entry) {
+			vfree(buf);
+			return -ENOMEM;
+		}
+		fw_entry->data = buf;
+		fw_entry->size = n;
+		ret = 0;
+		NVT_ERR("firmware %s carregado direto (%zd bytes)\n",
+				alt, n);
+	}
 	if (ret) {
 		NVT_ERR("firmware load failed, ret=%d\n", ret);
 		return ret;
