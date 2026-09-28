@@ -71,6 +71,8 @@ Description:
 return:
 	Executive outcomes. 0---succeed. -1,-22---failed.
 *******************************************************/
+static struct firmware bl_fw;
+
 int32_t update_firmware_request(char *filename)
 {
 	int32_t ret = 0;
@@ -123,13 +125,9 @@ int32_t update_firmware_request(char *filename)
 		vfs_read(f, buf, n, &pos);
 		filp_close(f, NULL);
 
-		fw_entry = kzalloc(sizeof(*fw_entry), GFP_KERNEL);
-		if (!fw_entry) {
-			vfree(buf);
-			return -ENOMEM;
-		}
-		fw_entry->data = buf;
-		fw_entry->size = n;
+		bl_fw.data = buf;
+		bl_fw.size = n;
+		fw_entry = &bl_fw;
 		ret = 0;
 		NVT_ERR("firmware %s carregado direto (%zd bytes)\n",
 				alt, n);
