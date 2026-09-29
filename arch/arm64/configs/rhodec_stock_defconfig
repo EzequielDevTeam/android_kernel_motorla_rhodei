@@ -6626,8 +6626,8 @@ CONFIG_BOOTLOG_DMESG=y
 # CONFIG_NOVA_ESD_ENABLE is not set  # Novatek nao e o toque deste aparelho (e ChipOne TDDI)
 
 CONFIG_SENSORS_CLASS=y
-CONFIG_TOUCHSCREEN_MMI=y
-CONFIG_INPUT_TOUCHSCREEN_MMI=y
+# CONFIG_TOUCHSCREEN_MMI is not set  # depende de panel_register_notifier (ausente na arvore)
+# CONFIG_INPUT_TOUCHSCREEN_MMI is not set
 
 # CONFIG_MODVERSIONS is not set
 
