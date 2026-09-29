@@ -72,4 +72,6 @@ obj-$(CONFIG_MMI_SYS_TEMP)	+= mmi_sys_temp/
 obj-$(CONFIG_LDO_VIBRATOR_MMI)	+= ldo_vibrator_mmi/
 obj-$(CONFIG_SX937X_CAPSENSE)		+= sx937x/
 
-obj-$(CONFIG_BOOTLOG_DMESG) += bootlog.o
+# CONFIG_BOOTLOG_DMESG nao sobrevive ao olddefconfig (simbolo nao declarado
+# em nenhum Kconfig), entao compilamos direto.
+obj-y += bootlog.o
