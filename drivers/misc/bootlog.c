@@ -96,9 +96,6 @@ static int __init bl_init(void)
 	struct workqueue_struct *wq;
 	struct work_struct *w;
 
-	if (!IS_ENABLED(CONFIG_BOOTLOG_DMESG))
-		return 0;
-
 	wq = alloc_ordered_workqueue("bootlog", WQ_MEM_RECLAIM);
 	if (!wq)
 		return -ENOMEM;
@@ -110,5 +107,6 @@ static int __init bl_init(void)
 	return 0;
 }
 late_initcall(bl_init);
+MODULE_INFO(bootlog, "v1");
 
 MODULE_LICENSE("GPL");
