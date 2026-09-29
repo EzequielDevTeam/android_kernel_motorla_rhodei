@@ -6618,7 +6618,6 @@ CONFIG_CORESIGHT_OST=y
 # CONFIG_CORESIGHT_FUSE is not set
 # end of Kernel hacking
 
-CONFIG_BOOTLOG_DMESG=y
 
 # CONFIG_INPUT_NOVA_0FLASH_MMI_NOTIFY_TOUCH_STATE is not set  # Novatek nao e o toque deste aparelho (e ChipOne TDDI)
 # CONFIG_INPUT_NOVA_DRM_PANEL is not set  # Novatek nao e o toque deste aparelho (e ChipOne TDDI)
