@@ -2275,9 +2275,9 @@ CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_TEST_REPORTING=y
 # CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_VIDEO is not set
 # CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_DEBUG is not set
 # CONFIG_TOUCHSCREEN_NT36XXX is not set  # driver I2C: duplica simbolos com o SPI (o do aparelho)
-CONFIG_TOUCHSCREEN_NT36xxx_HOSTDL_SPI_MMI=y
-CONFIG_INPUT_NOVA_0FLASH_MMI_ENABLE_DOUBLE_TAP=y
-CONFIG_INPUT_NOVA_PANEL_NOTIFICATIONS=y
+# CONFIG_TOUCHSCREEN_NT36xxx_HOSTDL_SPI_MMI is not set  # Novatek nao e o toque deste aparelho (e ChipOne TDDI)
+# CONFIG_INPUT_NOVA_0FLASH_MMI_ENABLE_DOUBLE_TAP is not set  # Novatek nao e o toque deste aparelho (e ChipOne TDDI)
+# CONFIG_INPUT_NOVA_PANEL_NOTIFICATIONS is not set  # Novatek nao e o toque deste aparelho (e ChipOne TDDI)
 # CONFIG_NOVATEK_TRUSTED_TOUCH is not set
 CONFIG_INPUT_MISC=y
 # CONFIG_INPUT_AD714X is not set
@@ -6620,10 +6620,10 @@ CONFIG_CORESIGHT_OST=y
 
 CONFIG_BOOTLOG_DMESG=y
 
-CONFIG_INPUT_NOVA_0FLASH_MMI_NOTIFY_TOUCH_STATE=y
-CONFIG_INPUT_NOVA_DRM_PANEL=y
-CONFIG_INPUT_NOVA_CHIP_VER_1=y
-CONFIG_NOVA_ESD_ENABLE=y
+# CONFIG_INPUT_NOVA_0FLASH_MMI_NOTIFY_TOUCH_STATE is not set  # Novatek nao e o toque deste aparelho (e ChipOne TDDI)
+# CONFIG_INPUT_NOVA_DRM_PANEL is not set  # Novatek nao e o toque deste aparelho (e ChipOne TDDI)
+# CONFIG_INPUT_NOVA_CHIP_VER_1 is not set  # Novatek nao e o toque deste aparelho (e ChipOne TDDI)
+# CONFIG_NOVA_ESD_ENABLE is not set  # Novatek nao e o toque deste aparelho (e ChipOne TDDI)
 
 CONFIG_SENSORS_CLASS=y
 CONFIG_TOUCHSCREEN_MMI=y
