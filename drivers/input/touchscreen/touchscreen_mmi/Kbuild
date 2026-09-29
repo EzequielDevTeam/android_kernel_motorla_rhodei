@@ -1,6 +1,6 @@
-ifneq ($(filter m y, $(CONFIG_PANEL_NOTIFICATIONS)),)
-	EXTRA_CFLAGS += -DCONFIG_PANEL_NOTIFICATIONS
-endif
+# CONFIG_PANEL_NOTIFICATIONS nao existe como simbolo Kconfig nesta arvore,
+# entao a flag e injetada direto para o branch do header ser compilado.
+EXTRA_CFLAGS += -DCONFIG_PANEL_NOTIFICATIONS
 ifneq ($(filter m y, $(CONFIG_DRM_DYNAMIC_REFRESH_RATE)),)
 	EXTRA_CFLAGS += -DCONFIG_DRM_DYNAMIC_REFRESH_RATE
 endif
