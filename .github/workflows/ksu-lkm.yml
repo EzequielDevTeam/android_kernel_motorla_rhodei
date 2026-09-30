@@ -39,20 +39,27 @@ jobs:
           grep -q '^CONFIG_MODULES=y' linux-5.4.284/.config || { echo "FALHA: CONFIG_MODULES nao esta y"; exit 1; }
           make -C linux-5.4.284 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- modules_prepare
 
+      - name: Preparar vmlinux (exigido pelo check_symbol do SukiSU)
+        run: |
+          export ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-
+          make -C /tmp/kbuild/linux-5.4.284 vmlinux -j$(nproc) 2>&1 | tail -n 15
+          ls -l /tmp/kbuild/linux-5.4.284/vmlinux
+
       - name: Compilar kernelsu.ko
         run: |
           export KDIR=/tmp/kbuild/linux-5.4.284
           cd "$GITHUB_WORKSPACE/sukisu/kernel"
           echo "--- Kbuild presente? ---"; ls -la Kbuild Makefile
-          # O proprio Makefile do SukiSU repassa M= e src= para o kernel.
-          # Bypass no `all` (que exige check_symbol/vmlinux) compilando direto.
-          make -C "$KDIR" M="$GITHUB_WORKSPACE/sukisu/kernel" src="$GITHUB_WORKSPACE/sukisu/kernel" \
+          # Fluxo oficial do SukiSU: 'all' compila o .ko e roda o
+          # check_symbol contra o vmlinux (garante ABI/assinatura).
+          make KDIR="$KDIR" \
             ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
-            modules 2>&1 | tail -n 40
+            all 2>&1 | tail -n 50
           echo "--- procurando .ko ---"
           find "$GITHUB_WORKSPACE/sukisu" -name '*.ko' -exec ls -l {} \;
-          test -f "$GITHUB_WORKSPACE/sukisu/kernel/kernelsu.ko" || { echo "FALHA: kernelsu.ko nao gerado"; exit 1; }
-          modinfo "$GITHUB_WORKSPACE/sukisu/kernel/kernelsu.ko" | head -n 8
+          KO=$(find "$GITHUB_WORKSPACE/sukisu" -name 'kernelsu.ko' | head -n 1)
+          test -n "$KO" || { echo "FALHA: kernelsu.ko nao gerado"; exit 1; }
+          modinfo "$KO" | head -n 8
 
       - name: Subir artefato
         uses: actions/upload-artifact@v4
