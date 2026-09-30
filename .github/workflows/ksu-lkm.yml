@@ -1,0 +1,42 @@
+name: build-ksu-lkm-54
+on:
+  workflow_dispatch:
+    inputs:
+      ksu_ref:
+        description: 'tag do SukiSU'
+        default: 'v4.2.0'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: SukiSU-Ultra/SukiSU-Ultra
+          ref: ${{ inputs.ksu_ref }}
+          path: sukisu
+
+      - name: Preparar headers do kernel 5.4
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq bc libssl-dev libelf-dev flex bison
+          mkdir -p /tmp/kbuild
+          cd /tmp/kbuild
+          curl -sL https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.4.284.tar.xz -o linux.tar.xz
+          tar xf linux.tar.xz
+          # so os headers/driver headers sao necessarios para o modulo standalone
+          make -C linux-5.4.284 olddefconfig
+          make -C linux-5.4.284 modules_prepare
+
+      - name: Compilar kernelsu.ko
+        run: |
+          cd sukisu/kernel
+          make -C /tmp/kbuild/linux-5.4.284 M=$PWD \
+            ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
+            modules
+
+      - name: Subir artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernelsu-ko
+          path: sukisu/kernel/kernelsu.ko
