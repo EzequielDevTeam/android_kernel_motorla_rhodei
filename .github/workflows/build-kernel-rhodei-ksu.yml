@@ -125,6 +125,9 @@ jobs:
             -e 's#__p4d_to_phys(#p4d_to_phys(#g' \
             -e 's#handle_inode_event#handle_vfs_event#g' \
             -e 's#SECCOMP_FILTER_FLAG_#SECCOMP_RET_#g' || true
+          # Erro: sulog/event.c:5 fatal error 'linux/minmax.h' (so 5.19+)
+          find KernelSU \( -name '*.c' -o -name '*.h' \) | xargs sed -i \
+            -e 's#<linux/minmax.h>#<linux/kernel.h>#g' || true
           echo "--- verificacao ---"
           grep -rn "nofault\|prio_sys\|filter_count" KernelSU/kernel/ 2>/dev/null | head -n 5 || true
           echo "=== Backport 5.4: register_trace_prio_sys_enter -> register_trace_sys_enter ==="
