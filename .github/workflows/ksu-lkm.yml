@@ -42,14 +42,18 @@ jobs:
       - name: Compilar kernelsu.ko
         run: |
           export KDIR=/tmp/kbuild/linux-5.4.284
+          # O SukiSU inclui headers que so existem no Android common kernel
+          # (ex.: linux/pgtable.h), ausentes no mainline 5.4 do kernel.org.
+          # Copiamos os headers-common-android do GSI para include/linux e
+          # include/uapi, que sao os mesmos que o teu aparelho usa.
+          for h in pgtable.h kcmp.h binder.h binder_external.h; do
+            curl -fsSL "https://raw.githubusercontent.com/LineageOS/android_kernel_common/android-5.4-async/include/linux/$h" \
+              -o "$KDIR/include/linux/$h" && echo "ok linux/$h" || echo "skip linux/$h"
+          done
           cd "$GITHUB_WORKSPACE/sukisu/kernel"
           echo "--- arquivos ---"; ls Kbuild Makefile
-          # O kernel/Kbuild do SukiSU declara 'kernelsu-objs' mas NUNCA declara
-          # 'obj-m' -- quem monta o modulo e o Makefile dele, via MO=$(ODIR).
-          # Forcamos o padrao do kbuild: obj-m := kernelsu.o com o Kbuild.
           cp Kbuild Kbuild.bak
           grep -q '^obj-m' Kbuild || sed -i '1i obj-m += kernelsu.o' Kbuild
-          head -n 2 Kbuild
           make -C "$KDIR" M="$PWD" \
             ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
             modules 2>&1 | tail -n 40
