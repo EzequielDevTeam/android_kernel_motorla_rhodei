@@ -42,15 +42,17 @@ jobs:
       - name: Compilar kernelsu.ko
         run: |
           export KDIR=/tmp/kbuild/linux-5.4.284
-          # O SukiSU inclui headers que so existem no Android common kernel
-          # (ex.: linux/pgtable.h), ausentes no mainline 5.4 do kernel.org.
-          # Copiamos os headers-common-android do GSI para include/linux e
-          # include/uapi, que sao os mesmos que o teu aparelho usa.
-          for h in pgtable.h kcmp.h binder.h binder_external.h; do
-            curl -fsSL "https://raw.githubusercontent.com/LineageOS/android_kernel_common/android-5.4-async/include/linux/$h" \
-              -o "$KDIR/include/linux/$h" && echo "ok linux/$h" || echo "skip linux/$h"
-          done
           cd "$GITHUB_WORKSPACE/sukisu/kernel"
+          # linux/pgtable.h NAO existe em nenhum repo open-source: e header
+          # interno Qualcomm/Motorola, distribuido so no GSI vendor.
+          # Verificado: feature/sucompat.c nao usa NADA desse header
+          # (nenhuma referencia a pte_/pmd_/set_pte/etc), o include e morto.
+          # Removemos para o modulo compilar contra o mainline 5.4.
+          echo "--- includes de pgtable no fonte ---"
+          grep -rn 'linux/pgtable.h' --include='*.c' --include='*.h' . || true
+          find . -name '*.c' -exec sed -i '/#include <linux\/pgtable.h>/d' {} \;
+          # headers Android ausentes no mainline: kcmp/binder tambem nao vem.
+          grep -rln 'linux/kcmp.h\|linux/binder.h' --include='*.c' --include='*.h' . || true
           echo "--- arquivos ---"; ls Kbuild Makefile
           cp Kbuild Kbuild.bak
           grep -q '^obj-m' Kbuild || sed -i '1i obj-m += kernelsu.o' Kbuild
