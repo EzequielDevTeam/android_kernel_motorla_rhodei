@@ -109,7 +109,7 @@ jobs:
             -e 's#\bcopy_to_kernel_nofault(#copy_to_user(#g' \
             -e 's#\bregister_trace_prio_sys_enter(#register_trace_sys_enter(#g' \
             -e 's#\bregister_trace_prio_sys_exit(#register_trace_sys_exit(#g' \
-            -e 's#\bput_task_struct(#put_task_struct_rcu_user_lock(#g' || true
+            -e 's#\bput_task_struct_rcu_user_lock(#put_task_struct(#g' || true
           # struct field renomeado no 5.4
           find KernelSU \( -name '*.c' -o -name '*.h' \) | xargs sed -i \
             -e 's#\.filter_count#.filter#g' || true
