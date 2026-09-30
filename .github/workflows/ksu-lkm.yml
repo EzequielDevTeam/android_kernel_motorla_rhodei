@@ -19,13 +19,20 @@ jobs:
       - name: Preparar headers do kernel 5.4
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq bc libssl-dev libelf-dev flex bison
+          sudo apt-get install -qq bc libssl-dev libelf-dev flex bison
           mkdir -p /tmp/kbuild
           cd /tmp/kbuild
           curl -sL https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.4.284.tar.xz -o linux.tar.xz
           tar xf linux.tar.xz
-          # so os headers/driver headers sao necessarios para o modulo standalone
+          # CONFIG_MODULES e obrigatorio para compilar um .ko externo.
+          # Nao usar olddefconfig puro: ele herda a config do host
+          # (/boot/config-*) e desliga MODULES.
+          make -C linux-5.4.284 defconfig
+          ./linux-5.4.284/scripts/config --file /tmp/kbuild/linux-5.4.284/.config \
+            -e MODULES -d MODVERSIONS -e KPROBES -e KALLSYMS -e KALLSYMS_ALL \
+            -e KALLSYMS_BASE_RELATIVE -e DEBUG_INFO -d DEBUG_INFO_REDUCED
           make -C linux-5.4.284 olddefconfig
+          grep -E '^CONFIG_(MODULES|MODVERSIONS|KPROBES)=' linux-5.4.284/.config
           make -C linux-5.4.284 modules_prepare
 
       - name: Compilar kernelsu.ko
