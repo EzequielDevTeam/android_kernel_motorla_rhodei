@@ -19,21 +19,25 @@ jobs:
       - name: Preparar headers do kernel 5.4
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -qq bc libssl-dev libelf-dev flex bison
+          sudo apt-get install -qq bc libssl-dev libelf-dev flex bison gcc-aarch64-linux-gnu
+          aarch64-linux-gnu-gcc --version | head -n 1
           mkdir -p /tmp/kbuild
           cd /tmp/kbuild
           curl -sL https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.4.284.tar.xz -o linux.tar.xz
           tar xf linux.tar.xz
           # CONFIG_MODULES e obrigatorio para compilar um .ko externo.
           # Nao usar olddefconfig puro: ele herda a config do host
-          # (/boot/config-*) e desliga MODULES.
-          make -C linux-5.4.284 defconfig
+          # (/boot/config-*) e desliga MODULES. defconfig tambem exige
+          # ARCH=arm64, senao usa x86_64_defconfig.
+          make -C linux-5.4.284 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- defconfig
           ./linux-5.4.284/scripts/config --file /tmp/kbuild/linux-5.4.284/.config \
             -e MODULES -d MODVERSIONS -e KPROBES -e KALLSYMS -e KALLSYMS_ALL \
-            -e KALLSYMS_BASE_RELATIVE -e DEBUG_INFO -d DEBUG_INFO_REDUCED
-          make -C linux-5.4.284 olddefconfig
-          grep -E '^CONFIG_(MODULES|MODVERSIONS|KPROBES)=' linux-5.4.284/.config
-          make -C linux-5.4.284 modules_prepare
+            -e KALLSYMS_BASE_RELATIVE
+          make -C linux-5.4.284 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
+          echo "--- config efetiva ---"
+          grep -E '^CONFIG_(MODULES|MODVERSIONS|KPROBES|KALLSYMS_ALL)=' linux-5.4.284/.config
+          grep -q '^CONFIG_MODULES=y' linux-5.4.284/.config || { echo "FALHA: CONFIG_MODULES nao esta y"; exit 1; }
+          make -C linux-5.4.284 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- modules_prepare
 
       - name: Compilar kernelsu.ko
         run: |
