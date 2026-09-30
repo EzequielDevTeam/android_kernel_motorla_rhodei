@@ -44,11 +44,15 @@ jobs:
           export KDIR=/tmp/kbuild/linux-5.4.284
           cd "$GITHUB_WORKSPACE/sukisu/kernel"
           echo "--- Kbuild presente? ---"; ls -la Kbuild Makefile
-          make -C "$KDIR" M="$GITHUB_WORKSPACE/sukisu/kernel" \
+          # O proprio Makefile do SukiSU repassa M= e src= para o kernel.
+          # Bypass no `all` (que exige check_symbol/vmlinux) compilando direto.
+          make -C "$KDIR" M="$GITHUB_WORKSPACE/sukisu/kernel" src="$GITHUB_WORKSPACE/sukisu/kernel" \
             ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
             modules 2>&1 | tail -n 40
           echo "--- procurando .ko ---"
           find "$GITHUB_WORKSPACE/sukisu" -name '*.ko' -exec ls -l {} \;
+          test -f "$GITHUB_WORKSPACE/sukisu/kernel/kernelsu.ko" || { echo "FALHA: kernelsu.ko nao gerado"; exit 1; }
+          modinfo "$GITHUB_WORKSPACE/sukisu/kernel/kernelsu.ko" | head -n 8
 
       - name: Subir artefato
         uses: actions/upload-artifact@v4
