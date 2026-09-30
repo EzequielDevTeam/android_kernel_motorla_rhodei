@@ -44,11 +44,13 @@ jobs:
           export KDIR=/tmp/kbuild/linux-5.4.284
           cd "$GITHUB_WORKSPACE/sukisu/kernel"
           echo "--- arquivos ---"; ls Kbuild Makefile
-          # O target 'all' do SukiSU roda check_symbol, que exige vmlinux
-          # compilado (muito lento). Compilamos direto pelo kbuild, que e o
-          # mesmo comando que o Makefile executa por dentro:
-          #   make -C $(KDIR) M=$(MDIR) src=$(MDIR) modules
-          make -C "$KDIR" M="$PWD" src="$PWD" \
+          # O kernel/Kbuild do SukiSU declara 'kernelsu-objs' mas NUNCA declara
+          # 'obj-m' -- quem monta o modulo e o Makefile dele, via MO=$(ODIR).
+          # Forcamos o padrao do kbuild: obj-m := kernelsu.o com o Kbuild.
+          cp Kbuild Kbuild.bak
+          grep -q '^obj-m' Kbuild || sed -i '1i obj-m += kernelsu.o' Kbuild
+          head -n 2 Kbuild
+          make -C "$KDIR" M="$PWD" \
             ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
             modules 2>&1 | tail -n 40
           echo "--- .ko gerados ---"
