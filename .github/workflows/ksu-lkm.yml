@@ -30,13 +30,17 @@ jobs:
 
       - name: Compilar kernelsu.ko
         run: |
-          cd sukisu/kernel
-          make -C /tmp/kbuild/linux-5.4.284 M=$PWD \
+          export KDIR=/tmp/kbuild/linux-5.4.284
+          cd "$GITHUB_WORKSPACE/sukisu/kernel"
+          echo "--- Kbuild presente? ---"; ls -la Kbuild Makefile
+          make -C "$KDIR" M="$GITHUB_WORKSPACE/sukisu/kernel" \
             ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
-            modules
+            modules 2>&1 | tail -n 40
+          echo "--- procurando .ko ---"
+          find "$GITHUB_WORKSPACE/sukisu" -name '*.ko' -exec ls -l {} \;
 
       - name: Subir artefato
         uses: actions/upload-artifact@v4
         with:
           name: kernelsu-ko
-          path: sukisu/kernel/kernelsu.ko
+          path: sukisu/kernel/*.ko
