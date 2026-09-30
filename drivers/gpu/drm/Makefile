@@ -94,7 +94,12 @@ obj-y			+= tilcdc/
 obj-$(CONFIG_DRM_QXL) += qxl/
 obj-$(CONFIG_DRM_BOCHS) += bochs/
 obj-$(CONFIG_DRM_VIRTIO_GPU) += virtio/
-obj-$(CONFIG_DRM_MSM) += msm/
+# A copia mainline de drivers/gpu/drm/msm/ duplica os simbolos msm_* do
+# techpack/display/msm (msm_drv, msm_gem, msm_fb...). O driver de display
+# usado neste device vem do techpack (CONFIG_DISPLAY_BUILD). Mantemos
+# CONFIG_DRM_MSM ligado porque o vendor chipone_tddi_fhd_mmi.ko depende de
+# msm_drm, mas nao compilamos a arvore mainline.
+# obj-$(CONFIG_DRM_MSM) += msm/
 obj-$(CONFIG_DRM_TEGRA) += tegra/
 obj-$(CONFIG_DRM_STM) += stm/
 obj-$(CONFIG_DRM_STI) += sti/
