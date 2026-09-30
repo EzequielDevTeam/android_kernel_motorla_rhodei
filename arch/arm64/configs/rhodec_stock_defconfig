@@ -3428,7 +3428,7 @@ CONFIG_DRM_RCAR_WRITEBACK=y
 # CONFIG_DRM_QXL is not set
 # CONFIG_DRM_BOCHS is not set
 # CONFIG_DRM_VIRTIO_GPU is not set
-# CONFIG_DRM_MSM is not set  # display vem built-in do techpack/display
+CONFIG_DRM_MSM=y  # chipone_tddi_fhd_mmi.ko depende de msm_drm; arvore mainline neutralizada em drivers/gpu/drm/Makefile
 CONFIG_DRM_PANEL=y
 
 #
@@ -6628,7 +6628,6 @@ CONFIG_SENSORS_CLASS=y
 # CONFIG_TOUCHSCREEN_MMI is not set  # depende de panel_register_notifier (ausente na arvore)
 # CONFIG_INPUT_TOUCHSCREEN_MMI is not set
 
-# CONFIG_MODVERSIONS is not set
 
 # CONFIG_DRM_PANEL_NOTIFICATIONS is not set
 
