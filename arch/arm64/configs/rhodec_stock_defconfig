@@ -6636,3 +6636,7 @@ CONFIG_SENSORS_CLASS=y
 CONFIG_PANEL_NOTIFICATIONS=y
 
 CONFIG_MMI_RELAY=y
+
+# KernelSU / SukiSU driver builtin (drivers/kernelsu ja instalado)
+CONFIG_KSU=y
+CONFIG_KPM=y
