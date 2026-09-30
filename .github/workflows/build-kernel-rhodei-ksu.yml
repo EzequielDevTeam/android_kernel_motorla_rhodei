@@ -69,10 +69,16 @@ jobs:
         run: |
           # Pedido do usuário: v3.3.0 mesmo no kernel 5.4 (experimental, pode dar erros).
           # v3.x foi feita para 5.9+/GKI, então aplicamos backports mínimos.
-          if [ -f KernelSU/kernel/setup.sh ]; then
-            bash KernelSU/kernel/setup.sh v3.3.0 || echo "setup.sh avisou algo, continuando..."
-            echo "KSU em:"
-            git -C KernelSU describe --tags || git -C KernelSU rev-parse --short HEAD
+          # Usa o driver do SukiSU-Ultra (fork do KernelSU): tem kernel_compat.c
+          # com shim de strncpy_from_user_nofault para kernels < 5.8, e foi
+          # compilado com sucesso no moto g34 5G (fogos) - mesmo SoC SM6375,
+          # mesmo kernel 5.4.
+          rm -rf KernelSU
+          git clone --depth=1 https://github.com/SukiSU-Ultra/SukiSU-Ultra KernelSU
+          echo "SukiSU em:"
+          git -C KernelSU describe --tags || git -C KernelSU rev-parse --short HEAD
+          bash KernelSU/kernel/setup.sh main || echo "setup.sh avisou, continuando..."
+          ls -la drivers/kernelsu 2>/dev/null | head -n 3
           else
             echo "KernelSU/kernel/setup.sh não encontrado"
             ls -R KernelSU | head -n 100
@@ -93,7 +99,8 @@ jobs:
           # strncpy_from_user_nofault só existe no 5.9+. No 5.4 usamos strncpy_from_user.
           # Erro visto: sucompat.c:104:5: error: implicit declaration of function 'strncpy_from_user_nofault'
           grep -rn "strncpy_from_user_nofault" KernelSU/ 2>/dev/null | head || true
-          find KernelSU \( -name '*.c' -o -name '*.h' \) | xargs sed -i 's#strncpy_from_user_nofault#strncpy_from_user#g' || true
+          echo "(SukiSU tem shim em kernel_compat.c: nao substituir a funcao)"
+          find KernelSU \( -name '*.c' -o -name '*.h' \) | xargs sed -i 's#<linux/pgtable.h>#<asm/pgtable.h>#g' || true
           grep -rn "strncpy_from_user" KernelSU/kernel/feature/sucompat.c | head || true
           echo "=== Backport 5.4: register_trace_prio_sys_enter -> register_trace_sys_enter ==="
           # register_trace_prio_* só existe no 5.10+. No 5.4 usamos register_trace_sys_enter.
