@@ -79,10 +79,6 @@ jobs:
           git -C KernelSU describe --tags || git -C KernelSU rev-parse --short HEAD
           bash KernelSU/kernel/setup.sh main || echo "setup.sh avisou, continuando..."
           ls -la drivers/kernelsu 2>/dev/null | head -n 3
-          else
-            echo "KernelSU/kernel/setup.sh não encontrado"
-            ls -R KernelSU | head -n 100
-          fi
           echo "=== Backport 5.4: linux/pgtable.h -> asm/pgtable.h ==="
           # Em 5.4 não existe include/linux/pgtable.h (só a partir do 5.9).
           # O v3.3.0 usa em kernel/feature/sucompat.c: #include <linux/pgtable.h>
