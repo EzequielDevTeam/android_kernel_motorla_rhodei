@@ -1,6 +1,6 @@
-# Tutorial: instalando o kernel com KernelSU (Moto G62 5G)
+# Tutorial: kernel com KernelSU no Moto G62 5G (pra quem nunca fez isso)
 
-> Leia TUDO antes de começar. Siga na ordem. Dúvidas? Abra uma Issue.
+> Lê tudo antes, segue na ordem. Travou em algo? Abre uma Issue que eu ajudo.
 
 ## 0. O que é cada coisa (sem jargão)
 
